@@ -1,0 +1,284 @@
+Screen {
+    layout: vertical;
+}
+
+#topbar {
+    height: 1;
+    background: $primary-darken-2;
+    color: $text;
+    padding: 0 1;
+}
+
+#body {
+    height: 1fr;
+}
+
+#chat {
+    width: 1fr;
+    padding: 0 1;
+}
+
+/* ---- 对话流 ---- */
+
+.user {
+    background: $boost;
+    border-left: thick $accent;
+    padding: 0 1;
+    margin: 1 0 0 0;
+}
+
+.user.queued {
+    border-left: thick $warning;
+    color: $text-muted;
+}
+
+.notice {
+    color: $text-muted;
+    margin: 1 0 0 0;
+}
+
+.notice.warning {
+    color: $warning;
+}
+
+.notice.error {
+    color: $error;
+}
+
+.assistant {
+    margin: 1 0 0 0;
+    padding: 0;
+    background: transparent;
+}
+
+Collapsible {
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+}
+
+Collapsible > Contents {
+    padding: 0 0 0 2;
+}
+
+.thinking {
+    color: $text-disabled;
+    margin: 1 0 0 0;
+}
+
+.thinking-body {
+    color: $text-disabled;
+}
+
+.tool {
+    height: auto;
+    margin: 0;
+}
+
+.tool-line {
+    color: $text-muted;
+}
+
+.tool-output {
+    color: $text-muted;
+    padding: 0 0 0 2;
+    max-height: 30;
+}
+
+.diff {
+    padding: 0 0 0 2;
+}
+
+.gate {
+    border: round $panel-lighten-2;
+    padding: 0 1;
+    margin: 1 0 0 0;
+}
+
+.gate.ok {
+    border: round $success;
+}
+
+.gate.retry {
+    border: round $warning;
+}
+
+.gate.fail {
+    border: round $error;
+}
+
+.subagent {
+    margin: 0;
+}
+
+.sub-body {
+    height: auto;
+    padding: 0 0 0 2;
+}
+
+.sub-answer {
+    margin: 1 0 0 0;
+    padding: 0;
+    background: transparent;
+}
+
+.compact {
+    margin: 1 0 0 0;
+    padding: 0 1;
+    border-left: thick $secondary;
+}
+
+.history {
+    color: $text-muted;
+}
+
+/* ---- 补全 ---- */
+
+#completer {
+    height: auto;
+    max-height: 10;
+    border: round $panel-lighten-2;
+    background: $panel;
+    display: none;
+}
+
+.gate-baseline {
+    padding: 0 0 0 2;
+}
+
+/* ---- 侧栏 ---- */
+
+#side {
+    width: 34;
+    border-left: solid $primary-darken-1;
+    padding: 0 1;
+}
+
+.side-title {
+    text-style: bold;
+    color: $accent;
+    margin: 1 0 0 0;
+}
+
+#side-ctx Bar {
+    width: 20;
+}
+
+/* ---- 底部 ---- */
+
+#bottom {
+    height: auto;
+}
+
+#hint {
+    height: 1;
+    color: $text-muted;
+    padding: 0 1;
+}
+
+#input {
+    height: auto;
+    min-height: 3;
+    max-height: 10;
+    border: round $accent;
+    padding: 0 1;
+}
+
+/* ---- 权限弹层 ---- */
+
+PermissionScreen {
+    align: center middle;
+}
+
+#perm {
+    width: 90%;
+    max-width: 120;
+    height: auto;
+    max-height: 90%;
+    border: thick $warning;
+    background: $panel;
+    padding: 1 2;
+}
+
+#perm.danger {
+    border: thick $error;
+}
+
+#perm-title {
+    text-style: bold;
+    color: $warning;
+    margin: 0 0 1 0;
+}
+
+#perm-body {
+    height: auto;
+    max-height: 30;
+}
+
+#perm-keys {
+    margin: 1 0 0 0;
+}
+
+#perm-reason {
+    margin: 1 0 0 0;
+}
+
+/* ---- /diff ---- */
+
+DiffScreen {
+    align: center middle;
+}
+
+#diffview {
+    width: 95%;
+    height: 90%;
+    border: thick $accent;
+    background: $panel;
+    padding: 0 1;
+}
+
+#diff-tabs {
+    height: auto;
+    margin: 0 0 1 0;
+}
+
+#diff-body {
+    height: 1fr;
+}
+
+#diff-keys {
+    height: 1;
+}
+
+/* ---- 选择器 ---- */
+
+PickerScreen {
+    align: center middle;
+}
+
+#picker {
+    width: 90%;
+    max-width: 120;
+    height: auto;
+    max-height: 80%;
+    border: thick $accent;
+    background: $panel;
+    padding: 0 1;
+}
+
+#picker-title {
+    text-style: bold;
+    color: $accent;
+    margin: 0 0 1 0;
+}
+
+#picker-list {
+    height: auto;
+    max-height: 30;
+}
+
+#picker-keys {
+    height: 1;
+    color: $text-muted;
+}

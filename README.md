@@ -72,26 +72,6 @@ bash 工具没有沙箱，权限检查只用来防误操作。需要强隔离时
 - `tools`：只启用列出的内置工具，如 `["bash"]`（评测 E1 用）；不写表示全部启用。
 - MCP：只支持 stdio。启动后在后台连接 MCP Server，握手超时 15 秒，连不上只给提示，不影响其他功能。Server 的 stderr 写到 `~/.coda/logs/`。
 
-## 评测
-
-20 个任务（PaperLens 6 + toolz 7 + more-itertools 7；12 个 bug 修复 + 8 个小功能），隐藏测试判定，共 260 次运行、约 $1.7。完整报告见 [eval/report.md](eval/report.md)。
-
-| 配置 | 运行数 | 解决率 | 平均步数 | 输入 token | 单次成本 | 平均耗时 |
-|---|---|---|---|---|---|---|
-| E0 完整 Coda（deepseek-flash，开思考） | 40 | 100% | 9.6 | 72k | $0.0059 | 73s |
-| E1 只给 bash | 40 | 95.0% | 9.5 | 52k | $0.0055 | 76s |
-| E2 关闭完成闸门 | 40 | 97.5% | 9.3 | 73k | $0.0059 | 40s |
-| E3 关闭落盘和微压缩 | 40 | 97.5% | 10.0 | 76k | $0.0060 | 81s |
-| E4 关闭思考 | 40 | 97.5% | 11.7 | 92k | $0.0058 | 80s |
-| E5 Qwen3-Coder-30B-A3B | 20 | 65.0% | 14.1 | 212k | $0.0158 | 586s |
-
-E1–E4 的 5 次失败中有 4 次落在同一个题意有歧义的任务上，这组任务区分不出各个机制，详见报告的“结论”一节。另外跑了上下文预算 16k 的压力测试（C0 / C1），用来观察压缩实际触发时的表现。
-
-```bash
-uv run python -m eval.build                                   # 由 eval/spec.py 生成任务和隐藏测试（需要 eval/repos/ 下的仓库快照）
-uv run python -m eval.runner --config E0 --config E2 --reps 2 # 运行；结果追加到 eval/runs/results.jsonl，可断点续跑
-uv run python -m eval.report                                  # 生成 eval/report.md
-```
 
 ## 开发
 

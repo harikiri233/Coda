@@ -1,0 +1,17 @@
+{
+  "id": "mi-distribute",
+  "repo": "more-itertools",
+  "kind": "feature",
+  "stub": [
+    "more_itertools/more.py",
+    "distribute"
+  ],
+  "prompt": "more_itertools/more.py 里的 distribute(n, iterable) 还没有实现，请实现：把元素轮流分配到 n 个较小的可迭代对象里，返回长度为 n 的列表，第 i 个包含原序列的第 i、i+n、i+2n……个元素（从 0 开始数）；元素少于 n 个时，后面的为空；n 小于 1 时抛 ValueError。例如 [list(c) for c in distribute(3, [1, 2, 3, 4, 5, 6, 7])] == [[1, 4, 7], [2, 5], [3, 6]]。",
+  "hidden": [
+    "tests/test_more.py::DistributeTest::test_basic",
+    "tests/test_more.py::DistributeTest::test_invalid_n",
+    "tests/test_more.py::DistributeTest::test_large_n"
+  ],
+  "workspace_test": "python -m pytest -q -p no:cacheprovider",
+  "judge": "python -m pytest -q -p no:cacheprovider 'tests/test_more.py::DistributeTest::test_basic' 'tests/test_more.py::DistributeTest::test_invalid_n' 'tests/test_more.py::DistributeTest::test_large_n'"
+}

@@ -6,12 +6,15 @@
   缺失返回 400；空字符串可以通过（实测）。所以发送前给缺失的补空串。
 - 其他服务商：发送前去掉 reasoning_content，避免报未知字段或按输入计费。
 - 中断：cancel 事件被设置后关闭 HTTP 流，返回已收到的部分，并丢弃未完成的 tool_calls。
+- 限流：SDK 自带的重试最多只等 8 秒，硅基流动的 TPM 限流按分钟计（评测时实测），
+  所以 429 再按 10 / 20 / 40 / 60 秒退避重试，仍失败才报错。
 """
 
 from __future__ import annotations
 
 import json
 import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -24,6 +27,9 @@ from coda.llm.usage import Usage, UsageTracker, usage_from_api
 
 Message = dict[str, Any]
 TextCallback = Callable[[str], None]
+
+
+RATE_LIMIT_WAITS = (10, 20, 40, 60)
 
 
 class LLMError(RuntimeError):
@@ -111,6 +117,7 @@ class LLMClient:
             # SDK 自带重试：连接错误、408、409、429、5xx 按指数退避
             client = OpenAI(api_key=key, base_url=profile.base_url, timeout=timeout, max_retries=3)
         self._client = client
+        self._sleep = time.sleep  # 测试时替换
 
     @property
     def is_deepseek(self) -> bool:
@@ -166,14 +173,20 @@ class LLMClient:
         return kwargs
 
     def _create(self, **kwargs: Any) -> Any:
-        try:
-            return self._client.chat.completions.create(**kwargs)
-        except openai.APIStatusError as e:
-            if _is_context_error(e):
-                raise ContextTooLongError(str(e)) from e
-            raise LLMError(f"模型接口返回错误（HTTP {e.status_code}）：{e.message}") from e
-        except openai.APIConnectionError as e:
-            raise LLMError(f"无法连接模型接口 {self.profile.base_url}：{e}") from e
+        for attempt in range(len(RATE_LIMIT_WAITS) + 1):
+            try:
+                return self._client.chat.completions.create(**kwargs)
+            except openai.RateLimitError as e:
+                if attempt == len(RATE_LIMIT_WAITS):
+                    raise LLMError(f"模型接口持续限流（HTTP 429）：{e.message}") from e
+                self._sleep(RATE_LIMIT_WAITS[attempt])
+            except openai.APIStatusError as e:
+                if _is_context_error(e):
+                    raise ContextTooLongError(str(e)) from e
+                raise LLMError(f"模型接口返回错误（HTTP {e.status_code}）：{e.message}") from e
+            except openai.APIConnectionError as e:
+                raise LLMError(f"无法连接模型接口 {self.profile.base_url}：{e}") from e
+        raise AssertionError("unreachable")
 
     # ---- 调用 ----
 

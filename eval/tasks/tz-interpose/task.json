@@ -1,0 +1,18 @@
+{
+  "id": "tz-interpose",
+  "repo": "toolz",
+  "kind": "bug",
+  "mutations": [
+    [
+      "toolz/itertoolz.py",
+      "    inposed = concat(zip(itertools.repeat(el), seq))\n    next(inposed)\n",
+      "    inposed = concat(zip(itertools.repeat(el), seq))\n"
+    ]
+  ],
+  "prompt": "interpose 的结果开头多了一个分隔符：list(interpose('.', ['a', 'b', 'c'])) 应该是 ['a', '.', 'b', '.', 'c']，现在是 ['.', 'a', '.', 'b', '.', 'c']。请修复。",
+  "hidden": [
+    "toolz/tests/test_itertoolz.py::test_interpose"
+  ],
+  "workspace_test": "python -m pytest -q -p no:cacheprovider",
+  "judge": "python -m pytest -q -p no:cacheprovider 'toolz/tests/test_itertoolz.py::test_interpose'"
+}

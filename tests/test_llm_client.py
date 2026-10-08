@@ -168,3 +168,49 @@ def test_empty_arguments_parse_as_empty_dict():
     from coda.llm import ToolCall
 
     assert ToolCall("1", "todo", "").parse_arguments() == {}
+
+
+def test_rate_limit_backs_off_then_succeeds():
+    import openai
+
+    from coda.llm.client import RATE_LIMIT_WAITS
+
+    fake = FakeOpenAI(FakeStream([_chunk(content="ok", finish="stop"), _chunk(usage=USAGE)]))
+    failures = {"left": 2}
+
+    def create(**kwargs):
+        if failures["left"]:
+            failures["left"] -= 1
+            # SDK 只用到 response 的 request / status_code / headers，用替身即可
+            resp = NS(request=None, status_code=429, headers={})
+            raise openai.RateLimitError("TPM limit reached", response=resp, body=None)
+        return fake.stream
+
+    fake.chat.completions.create = create
+    llm = LLMClient(_profile(), client=fake)
+    slept: list[float] = []
+    llm._sleep = slept.append
+    assert llm.stream([{"role": "user", "content": "hi"}]).content == "ok"
+    assert slept == list(RATE_LIMIT_WAITS[:2])
+
+
+def test_other_http_errors_become_llm_error_without_retry():
+    import openai
+    import pytest
+
+    from coda.llm import LLMError
+
+    calls = []
+
+    def create(**kwargs):
+        calls.append(kwargs)
+        resp = NS(request=None, status_code=400, headers={})
+        raise openai.BadRequestError("bad request", response=resp, body=None)
+
+    fake = FakeOpenAI(None)
+    fake.chat.completions.create = create
+    llm = LLMClient(_profile(), client=fake)
+    llm._sleep = lambda s: pytest.fail("400 不应重试")
+    with pytest.raises(LLMError, match="HTTP 400"):
+        llm.stream([{"role": "user", "content": "hi"}])
+    assert len(calls) == 1

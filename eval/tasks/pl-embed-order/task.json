@@ -1,0 +1,18 @@
+{
+  "id": "pl-embed-order",
+  "repo": "paperlens",
+  "kind": "bug",
+  "mutations": [
+    [
+      "src/paperlens/models/siliconflow.py",
+      "items = sorted(data[\"data\"], key=lambda item: item[\"index\"])",
+      "items = data[\"data\"]"
+    ]
+  ],
+  "prompt": "入库新论文之后，稠密检索的结果明显错乱：问 Self-RAG 的反思标记，返回的段落和问题毫不相关，但 BM25 单路检索是正常的。怀疑是批量生成向量时哪一步出了问题（硅基流动的接口不保证按输入顺序返回）。请排查并修复。",
+  "hidden": [
+    "tests/test_siliconflow.py::test_embed_batches_and_keeps_order"
+  ],
+  "workspace_test": "uv run --frozen pytest -q -p no:cacheprovider",
+  "judge": "uv run --frozen pytest -q -p no:cacheprovider 'tests/test_siliconflow.py::test_embed_batches_and_keeps_order'"
+}

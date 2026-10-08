@@ -36,6 +36,7 @@ from coda.context.offload import Offloader, truncate_for_context
 from coda.llm import ToolCall
 from coda.safety.hooks import HookRunner
 from coda.safety.policy import PermissionPolicy
+from coda.safety.shell import is_readonly_command
 from coda.state.checkpoints import Checkpoints
 from coda.tools.base import (
     ErrorType,
@@ -61,6 +62,7 @@ class _Prepared:
     desc: str = ""
     args: dict[str, Any] | None = None
     result: ToolResult | None = None  # 预检阶段就确定的结果（参数错误、被拒绝）
+    fs_before: Any = None  # 非只读 bash 命令执行前的工作区指纹（完成闸门检测 bash 改动用）
 
 
 def tool_message(call_id: str, text: str) -> dict[str, Any]:
@@ -203,6 +205,10 @@ class ToolExecutor:
 
     def _before_run(self, prep: _Prepared) -> None:
         assert prep.tool is not None
+        if prep.tool.kind == "bash" and self.gate is not None:
+            readonly = is_readonly_command(prep.params.command, self.ctx.workdir)
+            prep.fs_before = self.gate.before_bash(readonly)
+            return
         if prep.tool.kind != "edit":
             return
         path = prep.tool.target_path(prep.params, self.ctx)
@@ -311,6 +317,7 @@ class ToolExecutor:
                 if self.checkpoints is not None:
                     self.sink.emit(FilesChanged(self.checkpoints.session_stats()))
             elif prep.tool.kind == "bash" and self.gate is not None:
+                self.gate.after_bash(prep.fs_before)
                 self.gate.note_bash(prep.desc, result.display.get("exit_code"))
         return tool_message(prep.call.id, text)
 

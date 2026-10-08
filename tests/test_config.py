@@ -77,3 +77,14 @@ def test_update_project_settings(tmp_path):
     s = load_settings(tmp_path)
     assert s.verify.command == "pytest -q"
     assert s.verify.baseline is False
+
+
+def test_enabled_tools_filters_registry(tmp_path):
+    from coda.agent.events import DenyApprover, ListSink
+    from coda.agent.loop import Agent
+    from tests.fakes import FakeLLM
+
+    agent = Agent(
+        FakeLLM([]), tmp_path, ListSink(), DenyApprover(), system_prompt="s", enabled_tools=["bash"]
+    )
+    assert agent.tools.names() == ["bash"]

@@ -1,0 +1,18 @@
+{
+  "id": "pl-weekend-price",
+  "repo": "paperlens",
+  "kind": "bug",
+  "mutations": [
+    [
+      "src/paperlens/models/usage.py",
+      "if t.weekday() >= 5:",
+      "if t.weekday() > 5:"
+    ]
+  ],
+  "prompt": "命令行最后打印的费用估算偏高：周六白天的 DeepSeek 调用按高峰价计费了。DeepSeek 周六、周日全天都是非高峰价。请修复。",
+  "hidden": [
+    "tests/test_usage.py::test_peak_hours"
+  ],
+  "workspace_test": "uv run --frozen pytest -q -p no:cacheprovider",
+  "judge": "uv run --frozen pytest -q -p no:cacheprovider 'tests/test_usage.py::test_peak_hours'"
+}

@@ -7,6 +7,9 @@
     不空 → 失败用例名 + 截断后的错误信息作为 <system-reminder> 回填，继续循环
   回填 max_rounds 次后仍有新增失败 → 停下，如实显示"⚠ 验证未通过"
 
+bash 命令（sed -i、python 脚本、git checkout 等）也会改文件：非只读命令执行前后各取一次工作区指纹
+（路径 → mtime、大小），有变化就和 edit_file 一样标记为改过；第一条非只读命令执行前同样先跑基线。
+
 有基线才能区分"Agent 引入的失败"和"仓库原本就有的失败"，否则闸门会一直卡住，
 或者模型去"修"不相关的测试。验证命令含 pytest 时自动追加 --junitxml 解析失败用例；
 其他命令只看退出码。
@@ -26,6 +29,7 @@ from coda.agent.events import EventSink, VerifyEnd, VerifyStart
 from coda.config import VerifyConfig
 from coda.safety.shell import split_command
 from coda.tools.bash import run_shell
+from coda.tools.walk import walk_files
 from coda.verify.junit import parse_junit
 
 MAX_FEEDBACK_FAILURES = 5
@@ -47,6 +51,26 @@ def detect_verify_command(workdir: Path) -> str | None:
     if (workdir / "uv.lock").is_file() and shutil.which("uv"):
         return "uv run pytest -q"
     return "python -m pytest -q"
+
+
+Fingerprint = dict[str, tuple[int, int]]
+
+
+def fingerprint(root: Path) -> Fingerprint:
+    """工作区文件指纹：相对路径 → (mtime_ns, 大小)。遵守 .gitignore，跳过 .venv 等目录。"""
+    out: Fingerprint = {}
+    for p in walk_files(root):
+        try:
+            st = p.stat()
+        except OSError:
+            continue
+        out[p.relative_to(root).as_posix()] = (st.st_mtime_ns, st.st_size)
+    return out
+
+
+def changed_paths(before: Fingerprint, after: Fingerprint) -> list[str]:
+    """新增、删除或内容（mtime / 大小）变化的文件。"""
+    return sorted(k for k in before.keys() | after.keys() if before.get(k) != after.get(k))
 
 
 def _summary_line(output: str) -> str:
@@ -177,6 +201,22 @@ class CompletionGate:
                 elapsed=result.elapsed,
             )
         )
+
+    def before_bash(self, readonly: bool) -> Fingerprint | None:
+        """非只读 bash 命令执行前调用：第一次时跑基线，返回指纹供执行后比对。"""
+        if not self.active or readonly:
+            return None
+        self.before_edit("")
+        return fingerprint(self.workdir)
+
+    def after_bash(self, before: Fingerprint | None) -> list[str]:
+        """返回这条命令改动的文件，并像编辑工具一样标记。"""
+        if before is None:
+            return []
+        changed = changed_paths(before, fingerprint(self.workdir))
+        for rel in changed:
+            self.after_edit(rel)
+        return changed
 
     def note_bash(self, command: str, exit_code: int | None) -> None:
         """模型自己用 bash 完整跑过验证命令且通过，就不必再跑一次。"""

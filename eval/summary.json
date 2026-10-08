@@ -1,0 +1,234 @@
+{
+ "E0": {
+  "n": 40,
+  "resolved": 1.0,
+  "false_done": 0.0,
+  "gate_saved": 0,
+  "gate_triggered": 0,
+  "steps": 9.575,
+  "input": 72356.325,
+  "output": 2789.025,
+  "cache": 0.8998128359891135,
+  "cost": 0.00591225,
+  "elapsed": 73.3175,
+  "tool_error_rate": 0.022443890274314215,
+  "errors": {
+   "invalid_args": 9
+  },
+  "status": {
+   "done": 40
+  },
+  "micro": 0,
+  "summary": 0,
+  "offloaded": 0,
+  "peak_context": 9680.9,
+  "peak_context_max": 18884,
+  "self_tested": 40,
+  "reps": 2
+ },
+ "E1": {
+  "n": 40,
+  "resolved": 0.95,
+  "false_done": 0.05,
+  "gate_saved": 0,
+  "gate_triggered": 0,
+  "steps": 9.525,
+  "input": 52425.225,
+  "output": 3072.5,
+  "cache": 0.9004520247647959,
+  "cost": 0.0055358000000000004,
+  "elapsed": 75.515,
+  "tool_error_rate": 0.0025188916876574307,
+  "errors": {
+   "denied": 1
+  },
+  "status": {
+   "done": 40
+  },
+  "micro": 0,
+  "summary": 0,
+  "offloaded": 5,
+  "peak_context": 7593.025,
+  "peak_context_max": 17530,
+  "self_tested": 40,
+  "reps": 2
+ },
+ "E2": {
+  "n": 40,
+  "resolved": 0.975,
+  "false_done": 0.025,
+  "gate_saved": 0,
+  "gate_triggered": 0,
+  "steps": 9.325,
+  "input": 72551.225,
+  "output": 2695.2,
+  "cache": 0.8964259390520284,
+  "cost": 0.00587875,
+  "elapsed": 39.785000000000004,
+  "tool_error_rate": 0.03015075376884422,
+  "errors": {
+   "invalid_args": 9,
+   "timeout": 1,
+   "denied": 1,
+   "not_read": 1
+  },
+  "status": {
+   "done": 40
+  },
+  "micro": 0,
+  "summary": 0,
+  "offloaded": 1,
+  "peak_context": 9576.65,
+  "peak_context_max": 26302,
+  "self_tested": 0,
+  "reps": 2
+ },
+ "E3": {
+  "n": 40,
+  "resolved": 0.975,
+  "false_done": 0.025,
+  "gate_saved": 0,
+  "gate_triggered": 0,
+  "steps": 10,
+  "input": 76427.6,
+  "output": 2689.975,
+  "cache": 0.8972674792875872,
+  "cost": 0.005994875,
+  "elapsed": 80.655,
+  "tool_error_rate": 0.02576112412177986,
+  "errors": {
+   "invalid_args": 8,
+   "timeout": 1,
+   "denied": 1,
+   "not_read": 1
+  },
+  "status": {
+   "done": 40
+  },
+  "micro": 0,
+  "summary": 0,
+  "offloaded": 0,
+  "peak_context": 9889.175,
+  "peak_context_max": 19991,
+  "self_tested": 40,
+  "reps": 2
+ },
+ "E4": {
+  "n": 40,
+  "resolved": 0.975,
+  "false_done": 0.025,
+  "gate_saved": 0,
+  "gate_triggered": 0,
+  "steps": 11.725,
+  "input": 92450.95,
+  "output": 2173.3,
+  "cache": 0.9042979006705718,
+  "cost": 0.00576395,
+  "elapsed": 79.52,
+  "tool_error_rate": 0.037267080745341616,
+  "errors": {
+   "invalid_args": 13,
+   "denied": 2,
+   "stale": 1,
+   "no_match": 1,
+   "ambiguous": 1
+  },
+  "status": {
+   "done": 40
+  },
+  "micro": 0,
+  "summary": 0,
+  "offloaded": 1,
+  "peak_context": 9331.05,
+  "peak_context_max": 28111,
+  "self_tested": 40,
+  "reps": 2
+ },
+ "C0": {
+  "n": 20,
+  "resolved": 0.95,
+  "false_done": 0.05,
+  "gate_saved": 0,
+  "gate_triggered": 0,
+  "steps": 9.4,
+  "input": 56657.7,
+  "output": 2128.4,
+  "cache": 0.8405282953596775,
+  "cost": 0.00555045,
+  "elapsed": 63.35,
+  "tool_error_rate": 0.050505050505050504,
+  "errors": {
+   "invalid_args": 9,
+   "denied": 1
+  },
+  "status": {
+   "done": 20
+  },
+  "micro": 11,
+  "summary": 0,
+  "offloaded": 1,
+  "peak_context": 7908.3,
+  "peak_context_max": 10914,
+  "self_tested": 20,
+  "reps": 1
+ },
+ "C1": {
+  "n": 20,
+  "resolved": 1.0,
+  "false_done": 0.0,
+  "gate_saved": 0,
+  "gate_triggered": 0,
+  "steps": 10.35,
+  "input": 71905.9,
+  "output": 3669.25,
+  "cache": 0.8664657559393596,
+  "cost": 0.00765765,
+  "elapsed": 73.24,
+  "tool_error_rate": 0.013761467889908258,
+  "errors": {
+   "invalid_args": 2,
+   "no_match": 1
+  },
+  "status": {
+   "done": 20
+  },
+  "micro": 0,
+  "summary": 5,
+  "offloaded": 0,
+  "peak_context": 8863.2,
+  "peak_context_max": 13523,
+  "self_tested": 20,
+  "reps": 1
+ },
+ "E5": {
+  "n": 20,
+  "resolved": 0.65,
+  "false_done": 0.15,
+  "gate_saved": 0,
+  "gate_triggered": 0,
+  "steps": 14.1,
+  "input": 212027.2,
+  "output": 3337.5,
+  "cache": 0.8436955258570599,
+  "cost": 0.01577645,
+  "elapsed": 586.25,
+  "tool_error_rate": 0.05755395683453238,
+  "errors": {
+   "invalid_args": 9,
+   "no_match": 7
+  },
+  "status": {
+   "max_steps": 1,
+   "done": 16,
+   "error": 1,
+   "crash": 2
+  },
+  "micro": 0,
+  "summary": 0,
+  "offloaded": 3,
+  "peak_context": 17675.3,
+  "peak_context_max": 39775,
+  "self_tested": 15,
+  "reps": 1
+ }
+}

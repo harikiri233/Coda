@@ -1,0 +1,23 @@
+{
+  "id": "mi-chunked-even",
+  "repo": "more-itertools",
+  "kind": "bug",
+  "mutations": [
+    [
+      "more_itertools/more.py",
+      "    num_full = length - partial_size * num_lists",
+      "    num_full = length - full_size * num_lists"
+    ]
+  ],
+  "prompt": "chunked_even 分块不均匀：list(chunked_even('ABCDEFG', 3)) 应该是 [['A', 'B', 'C'], ['D', 'E'], ['F', 'G']]（各块长度最多差 1），现在是 [['A', 'B', 'C'], ['D'], ['E'], ['F'], ['G']]。请修复。",
+  "hidden": [
+    "tests/test_more.py::ChunkedEvenTests::test_1",
+    "tests/test_more.py::ChunkedEvenTests::test_4",
+    "tests/test_more.py::ChunkedEvenTests::test_5",
+    "tests/test_more.py::ChunkedEvenTests::test_6",
+    "tests/test_more.py::ChunkedEvenTests::test_7",
+    "tests/test_more.py::ChunkedEvenTests::test_evenness"
+  ],
+  "workspace_test": "python -m pytest -q -p no:cacheprovider",
+  "judge": "python -m pytest -q -p no:cacheprovider 'tests/test_more.py::ChunkedEvenTests::test_1' 'tests/test_more.py::ChunkedEvenTests::test_4' 'tests/test_more.py::ChunkedEvenTests::test_5' 'tests/test_more.py::ChunkedEvenTests::test_6' 'tests/test_more.py::ChunkedEvenTests::test_7' 'tests/test_more.py::ChunkedEvenTests::test_evenness'"
+}

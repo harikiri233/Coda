@@ -1,6 +1,6 @@
 # Coda
 
-Coda 是面向国产大模型的终端 Coding Agent，界面是 Textual 全屏 TUI。不依赖任何 Agent 框架，只用 `openai` SDK 和 `mcp` SDK。已完成 M0–M6。
+Coda 是面向国产大模型的终端 Coding Agent，界面是 Textual 全屏 TUI。不依赖任何 Agent 框架，只用 `openai` SDK 和 `mcp` SDK。
 
 ```bash
 uv sync
@@ -68,12 +68,34 @@ bash 工具没有沙箱，权限检查只用来防误操作。需要强隔离时
 
 - 模型档案：内置 `deepseek-flash`（默认，开启思考）、`qwen3-coder`、`glm-4.5-air`（后两个走硅基流动）。可以在 `models` 里添加或覆盖，每个档案有自己的 `context_budget`（默认 128k）和价格 `price_per_m`。`/model` 可以在会话中途切换。切到非 DeepSeek 的模型时，历史里的思考内容不会发送。
 - Hooks：Hook 进程从 stdin 收到 JSON（工具名、参数、结果），环境变量 `CODA_FILE` 是文件路径。PreToolUse 以退出码 2 退出表示否决；PostToolUse 的 stdout 会追加到工具结果后面。
-- 完成闸门：改过代码后，模型准备结束时自动运行 `verify.command`，结果和修改前的基线比较，只把新增的失败回填给模型（pytest 通过 junitxml 精确到用例）。没有配置时，如果存在 `tests/` 目录，自动探测为 `uv run pytest -q`。`/verify off` 关闭闸门。
+- 完成闸门：改过代码后（包括 bash 命令改动的文件，按执行前后的工作区指纹检测），模型准备结束时自动运行 `verify.command`，结果和修改前的基线比较，只把新增的失败回填给模型（pytest 通过 junitxml 精确到用例）。没有配置时，如果存在 `tests/` 目录，自动探测为 `uv run pytest -q`。`/verify off` 关闭闸门。
+- `tools`：只启用列出的内置工具，如 `["bash"]`（评测 E1 用）；不写表示全部启用。
 - MCP：只支持 stdio。启动后在后台连接 MCP Server，握手超时 15 秒，连不上只给提示，不影响其他功能。Server 的 stderr 写到 `~/.coda/logs/`。
+
+## 评测
+
+20 个任务（PaperLens 6 + toolz 7 + more-itertools 7；12 个 bug 修复 + 8 个小功能），隐藏测试判定，共 260 次运行、约 $1.7。完整报告见 [eval/report.md](eval/report.md)。
+
+| 配置 | 运行数 | 解决率 | 平均步数 | 输入 token | 单次成本 | 平均耗时 |
+|---|---|---|---|---|---|---|
+| E0 完整 Coda（deepseek-flash，开思考） | 40 | 100% | 9.6 | 72k | $0.0059 | 73s |
+| E1 只给 bash | 40 | 95.0% | 9.5 | 52k | $0.0055 | 76s |
+| E2 关闭完成闸门 | 40 | 97.5% | 9.3 | 73k | $0.0059 | 40s |
+| E3 关闭落盘和微压缩 | 40 | 97.5% | 10.0 | 76k | $0.0060 | 81s |
+| E4 关闭思考 | 40 | 97.5% | 11.7 | 92k | $0.0058 | 80s |
+| E5 Qwen3-Coder-30B-A3B | 20 | 65.0% | 14.1 | 212k | $0.0158 | 586s |
+
+E1–E4 的 5 次失败中有 4 次落在同一个题意有歧义的任务上，这组任务区分不出各个机制，详见报告的“结论”一节。另外跑了上下文预算 16k 的压力测试（C0 / C1），用来观察压缩实际触发时的表现。
+
+```bash
+uv run python -m eval.build                                   # 由 eval/spec.py 生成任务和隐藏测试（需要 eval/repos/ 下的仓库快照）
+uv run python -m eval.runner --config E0 --config E2 --reps 2 # 运行；结果追加到 eval/runs/results.jsonl，可断点续跑
+uv run python -m eval.report                                  # 生成 eval/report.md
+```
 
 ## 开发
 
 ```bash
-uv run pytest -q        # 209 个测试：FakeLLM 回放主循环，Textual run_test 驱动界面，本地 MCP Server
+uv run pytest -q        # 214 个测试：FakeLLM 回放主循环，Textual run_test 驱动界面，本地 MCP Server
 uv run ruff check src tests && uv run ruff format src tests
 ```

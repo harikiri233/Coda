@@ -102,6 +102,7 @@ class CodaApp(App):
             hooks=settings.hooks,
             verify=settings.verify,
             context=settings.context,
+            enabled_tools=settings.tools,
             session=Session.create(self.workdir, self.model_name),
         )
         self.mcp = mcp or McpManager(settings.mcpServers, self.workdir)

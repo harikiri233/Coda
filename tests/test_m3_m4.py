@@ -375,6 +375,28 @@ def test_gate_skipped_without_edits_and_when_model_ran_tests(pyrepo):
     assert [e.kind for e in sink.of(VerifyEnd)] == ["baseline", "final"]
 
 
+def test_gate_detects_edits_made_by_bash(pyrepo):
+    # 只用 bash 改文件（sed -i）：闸门也要跑基线和最终验证，并把新增失败回填
+    steps = [
+        Step(calls=[call("bash", {"command": "sed -i 's/a + b/a - b/' calc.py"})]),
+        Step(text="改好了"),
+        Step(calls=[call("bash", {"command": "sed -i 's/a - b/a + b/' calc.py"})]),
+        Step(text="修好了"),
+    ]
+    agent, llm, sink = make(pyrepo, steps, mode="yolo", verify=gate_cfg())
+    end = agent.run_turn("x")
+    assert end.status == "done" and end.verify == "passed"
+    kinds = [(e.kind, e.ok) for e in sink.of(VerifyEnd)]
+    assert kinds == [("baseline", False), ("final", False), ("final", True)]
+    assert "test_add" in llm.requests[2][-1]["content"]
+
+
+def test_gate_ignores_readonly_bash(pyrepo):
+    steps = [Step(calls=[call("bash", {"command": "ls"})]), Step(text="ok")]
+    agent, _, sink = make(pyrepo, steps, mode="yolo", verify=gate_cfg())
+    assert agent.run_turn("x").verify is None and not sink.of(VerifyStart)
+
+
 def test_gate_flags_test_file_edits(pyrepo):
     steps = [
         *read_and_edit("assert 1 == 2", "assert 1 == 1", "tests/test_calc.py"),

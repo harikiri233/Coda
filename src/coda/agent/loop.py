@@ -154,6 +154,7 @@ class Agent:
         session: Session | None = None,
         subagents: bool = True,
         skills: dict[str, Skill] | None = None,
+        enabled_tools: list[str] | None = None,
     ) -> None:
         self.llm = llm
         self.workdir = workdir.resolve()
@@ -188,6 +189,9 @@ class Agent:
                 tools.register(TaskTool(self.subagents))
             if self.skills:
                 tools.register(LoadSkillTool(self.skills))
+        if enabled_tools is not None:
+            # 评测 E1（只给 bash）用；MCP 工具在之后注册，不受影响
+            tools = ToolRegistry([tools.get(n) for n in tools.names() if n in enabled_tools])
         self.tools = tools
         self.executor = ToolExecutor(
             self.tools,
@@ -206,6 +210,12 @@ class Agent:
                 memory=render_memory(self.memory_files),
                 skills=render_catalog(self.skills),
             )
+            if enabled_tools is not None:
+                names = "、".join(self.tools.names()) or "（无）"
+                system_prompt += (
+                    f"\n# 本次可用的工具\n只有：{names}。上文提到的其他工具在本次会话中不可用，"
+                    "读文件、搜索和修改都用可用的工具完成（如 bash 里的 cat -n、grep -rn、sed -i 或 python 脚本）。\n"
+                )
         self.messages: list[Message] = [{"role": "system", "content": system_prompt}]
         self.user_inputs: list[str] = []  # 用户历次原话，摘要压缩时原样保留
         self.running = False

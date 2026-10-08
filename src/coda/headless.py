@@ -198,6 +198,7 @@ def run_headless(
         verify=settings.verify,
         interactive=False,
         context=settings.context,
+        enabled_tools=settings.tools,
         session=session,
     )
     if resume:

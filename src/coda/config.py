@@ -127,6 +127,7 @@ class Settings(BaseModel):
         default_factory=dict
     )  # 与 Claude Code 等工具相同的键名
     show_thinking: bool = True
+    tools: list[str] | None = None  # 启用的工具名（如 ["bash"]，评测 E1 用）；None 表示全部
 
     def profile(self, name: str | None = None) -> ModelProfile:
         key = name or self.model

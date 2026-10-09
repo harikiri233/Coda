@@ -3,8 +3,7 @@
 同步代码，在 TUI 的 worker 线程或无头模式的主线程里运行；与外界只通过 EventSink / Approver 交互。
 
 每一步开始前检查上下文：达到预算 60% 做微压缩、85% 做摘要压缩（context/compact.py）；
-接口返回上下文超长时强制摘要压缩再重试一次。模型准备结束时经过完成闸门：改过代码就跑测试，
-新增失败回填给模型继续修。消息和运行过程逐条写入会话 JSONL（state/session.py），可以随时恢复。
+接口返回上下文超长时强制摘要压缩再重试一次。消息和运行过程逐条写入会话 JSONL（state/session.py），可以随时恢复。
 """
 
 from __future__ import annotations
@@ -34,19 +33,17 @@ from coda.agent.events import (
     TurnEnd,
     TurnStart,
     UsageUpdate,
-    VerifyEnd,
 )
 from coda.agent.executor import ToolExecutor
 from coda.agent.prompt import build_system_prompt
 from coda.agent.subagent import SubagentRunner, TaskTool
-from coda.config import ContextConfig, Hooks, Mode, Permissions, VerifyConfig
+from coda.config import ContextConfig, Mode, Permissions
 from coda.context.compact import CompactResult, ContextManager
 from coda.context.memory import MemoryFile, load_memory, render_memory
 from coda.context.mentions import expand_mentions
 from coda.context.offload import Offloader
 from coda.context.skills import Skill, discover_skills, render_catalog
 from coda.llm import ContextTooLongError, LLMClient, LLMError, Reply
-from coda.safety.hooks import HookRunner
 from coda.safety.policy import PermissionPolicy
 from coda.state.checkpoints import Checkpoints
 from coda.state.filestate import FileState
@@ -55,7 +52,6 @@ from coda.tools import ToolRegistry, builtin_tools
 from coda.tools.base import ToolContext
 from coda.tools.skill import LoadSkillTool
 from coda.tools.todo import format_todos
-from coda.verify.gate import CompletionGate
 
 Message = dict[str, Any]
 
@@ -86,7 +82,6 @@ class RecordingSink:
                 status=ev.status,
                 steps=ev.steps,
                 error=ev.error,
-                verify=ev.verify,
                 final_text=ev.final_text,
             )
         elif isinstance(ev, ToolEnd):
@@ -107,18 +102,6 @@ class RecordingSink:
                 desc=ev.desc[:300],
                 decision=ev.decision,
                 reason=ev.reason,
-            )
-        elif isinstance(ev, VerifyEnd):
-            s.record(
-                "verify",
-                kind=ev.kind,
-                ok=ev.ok,
-                summary=ev.summary,
-                new_failures=ev.new_failures,
-                baseline_failures=ev.baseline_failures,
-                round=ev.round,
-                gave_up=ev.gave_up,
-                elapsed=round(ev.elapsed, 2),
             )
         elif isinstance(ev, UsageUpdate):
             s.record(
@@ -147,8 +130,6 @@ class Agent:
         tools: ToolRegistry | None = None,
         system_prompt: str | None = None,
         permissions: Permissions | None = None,
-        hooks: Hooks | None = None,
-        verify: VerifyConfig | None = None,
         interactive: bool = True,
         context: ContextConfig | None = None,
         session: Session | None = None,
@@ -165,7 +146,6 @@ class Agent:
         self.ctx = ToolContext(self.workdir, FileState(), self.cancel)
         self.policy = PermissionPolicy(mode, permissions or Permissions(), interactive)
         self.checkpoints = Checkpoints(self.workdir)
-        self.gate = CompletionGate(verify or VerifyConfig(), self.workdir, self.sink, self.cancel)
         self.context_cfg = context or ContextConfig()
         self.offloader = Offloader(self._outputs_dir(), self.context_cfg.offload_chars)
         self.policy.extra_read_roots = [self.offloader.folder]
@@ -190,7 +170,7 @@ class Agent:
             if self.skills:
                 tools.register(LoadSkillTool(self.skills))
         if enabled_tools is not None:
-            # 评测 E1（只给 bash）用；MCP 工具在之后注册，不受影响
+            # settings.tools 白名单；MCP 工具在之后注册，不受影响
             tools = ToolRegistry([tools.get(n) for n in tools.names() if n in enabled_tools])
         self.tools = tools
         self.executor = ToolExecutor(
@@ -199,9 +179,7 @@ class Agent:
             self.policy,
             self.sink,
             approver,
-            hooks=HookRunner(hooks or Hooks(), self.workdir),
             checkpoints=self.checkpoints,
-            gate=self.gate,
             offloader=self.offloader if self.context_cfg.offload else None,
         )
         if system_prompt is None:
@@ -223,7 +201,7 @@ class Agent:
     def _outputs_dir(self) -> Path:
         if self.session is not None:
             return self.session.outputs_dir
-        # 没有会话（测试、评测里不落会话）时放临时目录，第一次落盘时才创建
+        # 没有会话（测试里不落会话）时放临时目录，第一次落盘时才创建
         return Path(tempfile.gettempdir()) / f"coda-outputs-{os.getpid()}-{id(self):x}"
 
     # ---- 外部控制 ----
@@ -422,7 +400,6 @@ class Agent:
         finally:
             self.running = False
             self._sync()
-        end.verify = self.gate.last_status
         self.sink.emit(end)
         return end
 
@@ -437,7 +414,6 @@ class Agent:
     def _run(self, user_input: str) -> TurnEnd:
         self.sink.emit(TurnStart(user_input))
         self.checkpoints.begin_turn()
-        self.gate.begin_turn()
         self.user_inputs.append(user_input)
         self.messages.append(self._user_message(user_input))
         self._sync()
@@ -482,13 +458,7 @@ class Agent:
             if not reply.tool_calls:
                 if reply.finish_reason == "length":
                     self.sink.emit(Notice("warning", "回复达到输出长度上限被截断。"))
-                feedback = self.gate.check()
-                if self.cancel.is_set():
-                    return TurnEnd("interrupted", step, final_text)
-                if feedback is None:
-                    return TurnEnd("done", step, final_text)
-                self.messages.append({"role": "user", "content": feedback})
-                continue
+                return TurnEnd("done", step, final_text)
 
             if reply.finish_reason == "length":
                 self.sink.emit(Notice("warning", "回复被长度上限截断，工具参数可能不完整。"))

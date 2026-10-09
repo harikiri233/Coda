@@ -7,11 +7,9 @@ from typing import TYPE_CHECKING
 
 from rich.text import Text
 
-from coda.config import update_project_settings
 from coda.context.memory import add_memory
 from coda.safety.policy import MODES
 from coda.state.session import Session, list_sessions
-from coda.verify.gate import detect_verify_command
 
 if TYPE_CHECKING:
     from coda.tui.app import CodaApp
@@ -27,9 +25,8 @@ COMMANDS: list[tuple[str, str]] = [
     ("/resume", "从历史会话列表中选择一个继续"),
     ("/undo", "撤销上一轮的文件修改（可连续撤销）"),
     ("/diff", "查看本会话所有文件的累计改动"),
-    ("/verify", "完成闸门：/verify on | off | <测试命令>"),
     ("/rules", "查看权限规则和本会话总是允许的规则"),
-    ("/init", "调查仓库，生成 AGENTS.md 并探测测试命令"),
+    ("/init", "调查仓库，生成 AGENTS.md"),
     ("/memory", '查看项目记忆，或追加一条约定：/memory add "不要改公共接口"'),
     ("/skills", "列出可用的 Skills"),
     ("/mcp", "查看 MCP Server 的连接状态和工具"),
@@ -48,8 +45,7 @@ INIT_PROMPT = """\
 - 内容简洁（建议 30–60 行），只写对修改代码有用的信息：项目用途一句话；构建、运行、测试、lint 的确切命令；
   目录结构和各模块职责；代码风格与约定（从现有代码和配置里归纳，不要编造）；容易踩的坑。
 - 不要列出每个文件，不要写通用的编程建议。
-- 已有 AGENTS.md 时保留其中人工写的约定，只补充和修正。
-{verify}"""
+- 已有 AGENTS.md 时保留其中人工写的约定，只补充和修正。"""
 
 
 def _k(n: int) -> str:
@@ -124,8 +120,6 @@ async def handle_command(app: CodaApp, text: str) -> None:
             await app.notice("本会话还没有修改文件（bash 命令造成的修改不在统计范围内）。")
             return
         app.push_screen(DiffScreen(diffs))
-    elif name == "/verify":
-        await _verify(app, arg)
     elif name == "/rules":
         await _rules(app)
     elif name == "/init":
@@ -243,30 +237,6 @@ def session_items(app: CodaApp) -> list[tuple[str, Text]]:
     return items
 
 
-async def _verify(app: CodaApp, arg: str) -> None:
-    gate = app.agent.gate
-    if arg in ("on", "off"):
-        gate.enabled = arg == "on"
-        if gate.enabled and not gate.command:
-            await app.notice("已开启，但还没有验证命令：用 /verify <命令> 设置。", "warning")
-        else:
-            await app.notice(f"完成闸门已{'开启' if gate.enabled else '关闭'}（仅本会话）。")
-    elif arg:
-        gate.command = arg
-        gate.detected = False
-        gate.enabled = True
-        path = update_project_settings(app.workdir, {"verify": {"command": arg}})
-        await app.notice(f"验证命令设为 `{arg}`，已写入 {path}。")
-    else:
-        state = "开启" if gate.enabled else "关闭"
-        cmd = gate.command or "（未设置）"
-        src = "（自动探测）" if gate.detected else ""
-        await app.notice(
-            f"完成闸门：{state} · 命令 {cmd}{src} · 基线 {'开' if gate.cfg.baseline else '关'}"
-            f" · 最多回填 {gate.cfg.max_rounds} 轮\n用法：/verify on | off | <命令>"
-        )
-
-
 async def _rules(app: CodaApp) -> None:
     p = app.agent.policy
     lines = [f"模式：{p.mode}"]
@@ -281,17 +251,4 @@ async def _init(app: CodaApp) -> None:
     if app.busy:
         await app.notice("运行中不能执行 /init，先按 Esc 中断或等本轮结束。", "warning")
         return
-    gate = app.agent.gate
-    detected = detect_verify_command(app.workdir)
-    verify = ""
-    if not app.settings.verify.command and detected:
-        path = update_project_settings(app.workdir, {"verify": {"command": detected}})
-        gate.command = detected
-        gate.detected = False
-        await app.notice(f"探测到测试命令 `{detected}`，已写入 {path}（完成闸门会用它）。")
-        verify = (
-            f"- 测试命令暂定为 `{detected}`，确认它能正常运行；不对的话在回答里告诉我正确的命令。"
-        )
-    elif not detected and not app.settings.verify.command:
-        verify = "- 没有探测到测试命令。如果项目有测试，在回答最后单独一行写出确切的测试命令。"
-    app.submit(INIT_PROMPT.format(verify=verify).rstrip())
+    app.submit(INIT_PROMPT)

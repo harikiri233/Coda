@@ -4,5 +4,3 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .coda/sessions/
-eval/repos/
-eval/runs/

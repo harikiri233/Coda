@@ -4,8 +4,6 @@
 - 分开返回退出码、stdout、stderr。
 - 新建进程组运行；超时或 Esc 中断时杀掉整个进程组，连同子进程一起结束。
 - stdin 接 /dev/null，交互式命令不会卡住。
-
-run_shell 也给完成闸门和 Hooks 复用。
 """
 
 from __future__ import annotations

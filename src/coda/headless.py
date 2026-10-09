@@ -1,10 +1,10 @@
 """无头模式 coda -p：不打开界面，单次执行一个任务。
 
 - --output text：在终端实时打印思考（灰色）、工具调用一行摘要和流式回答。
-- --output json：只在结束时向 stdout 输出一个 JSON（最终回答、状态、步数、工具调用、用量），供脚本和评测使用；
+- --output json：只在结束时向 stdout 输出一个 JSON（最终回答、状态、步数、工具调用、用量），供脚本使用；
   过程信息打印到 stderr。
 - 需要确认的操作一律拒绝（DenyApprover），原因回填给模型。
-- 和 TUI 一样写会话 JSONL（评测从这里统计），JSON 输出里带 session 路径；-c 可以接着上次的会话执行。
+- 和 TUI 一样写会话 JSONL，JSON 输出里带 session 路径；-c 可以接着上次的会话执行。
 - 配置了 MCP Server 时先连接（最多等握手超时），连上的工具照常可用（默认仍需确认，所以要用 allow 规则放行）。
 """
 
@@ -32,8 +32,6 @@ from coda.agent.events import (
     ToolEnd,
     ToolStart,
     TurnEnd,
-    VerifyEnd,
-    VerifyStart,
 )
 from coda.agent.loop import Agent
 from coda.config import Mode, Settings
@@ -59,35 +57,6 @@ def result_mark(ev: ToolEnd) -> tuple[str, str]:
         color = "red"
     summary = ev.display.get("summary") or ("" if ev.ok else f"Error[{ev.error_type}]")
     return color, summary
-
-
-def verify_line(ev: VerifyEnd) -> str:
-    """完成闸门结果的一行描述（rich markup），TUI 和无头模式共用。"""
-    if ev.kind == "baseline":
-        if ev.baseline_failures > 0:
-            base = f"修改前已有 {ev.baseline_failures} 个失败，不计入本次"
-        elif ev.baseline_failures < 0:
-            base = "修改前验证命令就失败"
-        else:
-            base = "修改前全部通过"
-        return f"[dim]基线 · {escape(ev.summary)} · {base} · {ev.elapsed:.1f}s[/]"
-    tail = f"[dim]{escape(ev.command)} · {ev.elapsed:.1f}s[/]"
-    if ev.ok:
-        line = f"[b green]✓ 验证通过[/]  {escape(ev.summary)}  {tail}"
-        if ev.warning:
-            line += f"\n[yellow]{escape(ev.warning)}[/]"
-    else:
-        names = "、".join(ev.new_failures[:5]) + ("…" if len(ev.new_failures) > 5 else "")
-        if ev.feedback:
-            head = f"[b yellow]✗ 新增 {len(ev.new_failures)} 个失败，已回给 Agent 修复（{ev.round} 轮）[/]"
-        elif ev.gave_up:
-            head = f"[b red]⚠ 验证未通过[/]（已回填 {ev.round or '多'} 轮仍失败）"
-        else:
-            head = "[b red]⚠ 验证未通过[/]"
-        line = f"{head}  {escape(ev.summary)}  {tail}\n  [red]{escape(names)}[/]"
-    if ev.tests_edited:
-        line += f"\n[yellow]注意：本轮修改了测试文件 {escape('、'.join(ev.tests_edited))}，请检查是否合理。[/]"
-    return line
 
 
 class TextPrinter:
@@ -139,12 +108,6 @@ class TextPrinter:
             self._end_stream()
             color = {"info": "cyan", "warning": "yellow", "error": "red"}[ev.level]
             self.console.print(f"[{color}]{escape(ev.text)}[/]")
-        elif isinstance(ev, VerifyStart):
-            self._end_stream()
-            what = "记录基线" if ev.kind == "baseline" else "完成闸门"
-            self.console.print(f"[dim]⧗ {what}：{escape(ev.command)}[/]")
-        elif isinstance(ev, VerifyEnd):
-            self.console.print(verify_line(ev), highlight=False)
         elif isinstance(ev, Compacted):
             self._end_stream()
             what = "微压缩" if ev.kind == "micro" else "摘要压缩"
@@ -194,8 +157,6 @@ def run_headless(
         mode=mode or settings.mode,
         max_steps=max_steps or settings.max_steps,
         permissions=settings.permissions,
-        hooks=settings.hooks,
-        verify=settings.verify,
         interactive=False,
         context=settings.context,
         enabled_tools=settings.tools,
@@ -242,7 +203,6 @@ def run_headless(
             "mode": agent.mode,
             "elapsed": round(elapsed, 2),
             "tool_calls": tools,
-            "verify": end.verify,
             "session": str(session.path),
             "compactions": [
                 {"kind": c.kind, "before": c.before, "after": c.after}

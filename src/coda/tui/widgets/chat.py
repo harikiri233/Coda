@@ -12,8 +12,8 @@ from textual.containers import Vertical
 from textual.widgets import Collapsible, Markdown, Static
 from textual.widgets.markdown import MarkdownStream
 
-from coda.agent.events import Compacted, SubagentUpdate, ToolEnd, VerifyEnd
-from coda.headless import result_mark, short, verify_line
+from coda.agent.events import Compacted, SubagentUpdate, ToolEnd
+from coda.headless import result_mark, short
 
 OUTPUT_PREVIEW_LINES = 6
 
@@ -106,11 +106,9 @@ class ToolLine(Vertical):
                     Syntax(diff.rstrip("\n"), "diff", background_color="default"), classes="diff"
                 )
             )
-            self._show_hooks(ev)
             return
         if ev.name == "todo_write":
             return
-        self._show_hooks(ev)
         show_output = ev.name == "bash" or ev.name.startswith("mcp__")
         output = ev.display.get("output") if show_output else None
         if not ev.ok:
@@ -129,33 +127,6 @@ class ToolLine(Vertical):
                         classes="tool-fold",
                     )
                 )
-
-    def _show_hooks(self, ev: ToolEnd) -> None:
-        for h in ev.display.get("hooks", []):
-            ok = h["code"] == 0 and not h["timed_out"]
-            status = "超时" if h["timed_out"] else ("通过" if ok else f"exit {h['code']}")
-            color = "green" if ok else "yellow"
-            line = f"  [dim]↳ PostToolUse[/] {escape(short(h['command'], 60))} [{color}]{status}[/]"
-            out = h["output"].strip()
-            if out and not ok:
-                line += "\n" + "\n".join(f"    [dim]{escape(x)}[/]" for x in out.splitlines()[:8])
-            self.mount(Static(Text.from_markup(line), classes="tool-output"))
-
-
-class VerifyBox(Static):
-    """完成闸门：运行中显示命令，结束后显示通过 / 新增失败。基线只显示一行灰字。"""
-
-    def __init__(self, kind: str, command: str) -> None:
-        what = "记录修改前的测试基线" if kind == "baseline" else "完成闸门：运行验证"
-        super().__init__(
-            Text.from_markup(f"[dim]⧗ {what}  {escape(command)} …[/]"),
-            classes="gate" if kind == "final" else "gate-baseline",
-        )
-
-    def finish(self, ev: VerifyEnd) -> None:
-        self.update(Text.from_markup(verify_line(ev)))
-        if ev.kind == "final":
-            self.add_class("ok" if ev.ok else ("retry" if ev.feedback else "fail"))
 
 
 def _k(n: int) -> str:

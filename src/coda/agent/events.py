@@ -74,28 +74,6 @@ class TodoUpdate:
 
 
 @dataclass
-class VerifyStart:
-    kind: Literal["baseline", "final"]
-    command: str
-
-
-@dataclass
-class VerifyEnd:
-    kind: Literal["baseline", "final"]
-    command: str
-    ok: bool
-    summary: str  # 如 "48 passed in 3.2s"
-    new_failures: list[str] = field(default_factory=list)
-    baseline_failures: int = 0  # 基线失败数；-1 表示基线命令失败但无法解析
-    elapsed: float = 0.0
-    feedback: bool = False  # 失败信息已回填给模型，本轮继续
-    round: int = 0
-    gave_up: bool = False  # 达到最大轮数，停止回填
-    tests_edited: list[str] = field(default_factory=list)  # 本轮改过的测试文件，提醒用户检查
-    warning: str | None = None
-
-
-@dataclass
 class FilesChanged:
     """文件被修改或撤销后发出，界面据此刷新侧栏的改动列表。"""
 
@@ -158,7 +136,6 @@ class TurnEnd:
     steps: int
     final_text: str = ""
     error: str | None = None
-    verify: str | None = None  # 完成闸门：passed / failed / skipped；None 表示本轮没改文件
 
 
 Event = (
@@ -170,8 +147,6 @@ Event = (
     | ToolStart
     | ToolEnd
     | TodoUpdate
-    | VerifyStart
-    | VerifyEnd
     | FilesChanged
     | UsageUpdate
     | Compacted

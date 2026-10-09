@@ -67,7 +67,7 @@ def estimate_tokens_of(messages: list[Message]) -> int:
 
 
 def is_real_user(m: Message) -> bool:
-    """用户真正输入的消息（不是系统提醒、闸门回填或摘要）。"""
+    """用户真正输入的消息（不是系统提醒或摘要）。"""
     if m.get("role") != "user":
         return False
     content = m.get("content") or ""

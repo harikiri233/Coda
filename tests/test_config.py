@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from coda.config import get_api_key, load_settings, update_project_settings
+from coda.config import get_api_key, load_settings
 
 
 def _write(path, data):
@@ -69,14 +69,6 @@ def test_workspace_env_is_ignored(tmp_path, monkeypatch):
     (tmp_path / ".env").write_text("DEEPSEEK_API_KEY=project-secret\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     assert get_api_key("DEEPSEEK_API_KEY") is None
-
-
-def test_update_project_settings(tmp_path):
-    update_project_settings(tmp_path, {"verify": {"command": "pytest -q"}})
-    update_project_settings(tmp_path, {"verify": {"baseline": False}})
-    s = load_settings(tmp_path)
-    assert s.verify.command == "pytest -q"
-    assert s.verify.baseline is False
 
 
 def test_enabled_tools_filters_registry(tmp_path):

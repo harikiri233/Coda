@@ -5,8 +5,8 @@
   meta        会话信息（工作区、模型、创建时间），第一次写入时自动补上
   message     追加一条消息（含 reasoning_content，DeepSeek 恢复会话后第一次请求要用）
   snapshot    消息列表被整体替换（压缩、修复）时写入完整快照；恢复时从最后一个快照开始重放
-  turn_start / turn_end / tool / permission / verify / usage / todo_update / compact / model / notice
-              运行过程，评测脚本从这里统计步数、工具错误率、token 和成本
+  turn_start / turn_end / tool / permission / usage / todo_update / compact / model / notice
+              运行过程，可从这里统计步数、工具错误率、token 和成本
 
 消息只追加：Agent 每步之后调用 sync()，把新增的消息写盘；整体替换时调用 snapshot()。
 文件在第一次写入时才创建，打开界面后什么都没做就退出不会留下空会话。API Key 不写入。

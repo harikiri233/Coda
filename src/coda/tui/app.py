@@ -42,7 +42,6 @@ from coda.tui.widgets.chat import (
     ThinkingBlock,
     ToolLine,
     UserMessage,
-    VerifyBox,
 )
 from coda.tui.widgets.completer import Completer
 from coda.tui.widgets.prompt_input import PromptInput
@@ -99,8 +98,6 @@ class CodaApp(App):
             mode=mode or settings.mode,
             max_steps=max_steps or settings.max_steps,
             permissions=settings.permissions,
-            hooks=settings.hooks,
-            verify=settings.verify,
             context=settings.context,
             enabled_tools=settings.tools,
             session=Session.create(self.workdir, self.model_name),
@@ -117,7 +114,6 @@ class CodaApp(App):
         self._thinking: ThinkingBlock | None = None
         self._answer: AssistantMessage | None = None
         self._tools: dict[str, ToolLine | SubagentBlock] = {}
-        self._verify: VerifyBox | None = None
         self._turn_start = 0.0
         self._step = 0
         self._activity = "运行中"
@@ -167,12 +163,6 @@ class CodaApp(App):
     def _banner(self) -> str:
         profile = self.llm.profile
         think = "开" if self.llm.thinking_enabled() else "关"
-        gate = self.agent.gate
-        if gate.command:
-            how = "自动探测" if gate.detected else "配置"
-            verify = f"完成闸门：{gate.command}（{how}）" + ("" if gate.enabled else "，已关闭")
-        else:
-            verify = "完成闸门：未找到测试命令，/init 或 /verify <命令> 设置"
         extra = []
         if self.agent.memory_files:
             extra.append("AGENTS.md " + "、".join(f.scope for f in self.agent.memory_files))
@@ -182,8 +172,7 @@ class CodaApp(App):
             extra.append(f"MCP 连接中：{'、'.join(self.mcp.servers)}")
         loaded = f"\n已加载：{' · '.join(extra)}" if extra else ""
         return (
-            f"Coda · {self.model_name}（{profile.model}，思考{think}） · 工作区 {self.workdir}\n"
-            f"{verify}{loaded}\n"
+            f"Coda · {self.model_name}（{profile.model}，思考{think}） · 工作区 {self.workdir}{loaded}\n"
             "bash 工具没有沙箱，权限检查只用来防误操作。"
         )
 
@@ -445,15 +434,6 @@ class CodaApp(App):
             self.sidebar.update_todos(e.todos)
         elif isinstance(e, ev.FilesChanged):
             self.sidebar.update_changes(e.stats)
-        elif isinstance(e, ev.VerifyStart):
-            self._verify = VerifyBox(e.kind, e.command)
-            await self.chat.mount(self._verify)
-        elif isinstance(e, ev.VerifyEnd):
-            box = self._verify or VerifyBox(e.kind, e.command)
-            if self._verify is None:
-                await self.chat.mount(box)
-            box.finish(e)
-            self._verify = None
         elif isinstance(e, ev.UsageUpdate):
             self.sidebar.update_usage(e.total, e.context_tokens, e.context_budget)
         elif isinstance(e, ev.Compacted):

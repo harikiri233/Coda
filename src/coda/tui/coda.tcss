@@ -90,24 +90,6 @@ Collapsible > Contents {
     padding: 0 0 0 2;
 }
 
-.gate {
-    border: round $panel-lighten-2;
-    padding: 0 1;
-    margin: 1 0 0 0;
-}
-
-.gate.ok {
-    border: round $success;
-}
-
-.gate.retry {
-    border: round $warning;
-}
-
-.gate.fail {
-    border: round $error;
-}
-
 .subagent {
     margin: 0;
 }
@@ -141,10 +123,6 @@ Collapsible > Contents {
     border: round $panel-lighten-2;
     background: $panel;
     display: none;
-}
-
-.gate-baseline {
-    padding: 0 0 0 2;
 }
 
 /* ---- 侧栏 ---- */

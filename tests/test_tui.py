@@ -250,33 +250,6 @@ async def test_danger_permission_has_no_always(repo):
         assert llm.requests[1][-1]["content"].startswith("Error[denied]")
 
 
-async def test_gate_box_shown(tmp_path):
-    import json
-    import sys
-
-    (tmp_path / "m.py").write_text("X = 1\n")
-    (tmp_path / "test_m.py").write_text("from m import X\n\ndef test_x():\n    assert X == 1\n")
-    (tmp_path / ".coda").mkdir()
-    (tmp_path / ".coda" / "settings.json").write_text(
-        json.dumps({"verify": {"command": f"{sys.executable} -m pytest -q -p no:cacheprovider"}})
-    )
-    edit = {"path": "m.py", "old": "X = 1", "new": "X = 2"}
-    steps = [
-        Step(calls=[call("read_file", {"path": "m.py"})]),
-        Step(calls=[call("edit_file", edit)]),
-        Step(text="改好了"),
-        Step(calls=[call("edit_file", {"path": "m.py", "old": "X = 2", "new": "X = 1"})]),
-        Step(text="修好了"),
-    ]
-    app, _ = make_app(tmp_path, steps, mode="accept-edits")
-    async with app.run_test(size=(140, 40)) as pilot:
-        await send(pilot, "改")
-        await wait_idle(app, pilot, timeout=30)
-        boxes = [str(b.content) for b in app.query(".gate")]
-        assert len(boxes) == 2
-        assert "新增 1 个失败" in boxes[0] and "验证通过" in boxes[1]
-
-
 # ---------------------------------------------------------------- M5 / M6
 
 

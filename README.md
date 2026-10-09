@@ -18,7 +18,7 @@ API Key 放在环境变量或 `~/.coda/.env` 里（`DEEPSEEK_API_KEY`、`SILICON
 
 - 按键：Enter 发送 · Ctrl+J 换行 · ↑↓ 翻历史 · Esc 中断 · Shift+Tab 切换权限模式 · Ctrl+B 侧栏 · Ctrl+O 展开/折叠 · Ctrl+Q 退出。
 - 输入 `/` 弹出命令补全；输入 `@` 模糊搜索文件（遵守 .gitignore）。发送时会附上被引用文件的内容，Agent 可以直接编辑这个文件。
-- 命令：`/help /clear /compact /cost /model /thinking /mode /resume /undo /diff /verify /rules /init /memory /skills /mcp /copy /exit`。
+- 命令：`/help /clear /compact /cost /model /thinking /mode /resume /undo /diff /rules /init /memory /skills /mcp /copy /exit`。
 - 侧栏依次显示任务清单、本会话改动、上下文占用（含 60% / 85% 压缩阈值）、token、缓存命中率和花费。
 
 ## 权限
@@ -57,25 +57,19 @@ bash 工具没有沙箱，权限检查只用来防误操作。需要强隔离时
     "ask": ["read_file(.env*)"],
     "deny": ["bash(git push*)"]
   },
-  "hooks": {
-    "PostToolUse": [{"matcher": "edit_file|write_file", "command": "uv run ruff check \"$CODA_FILE\""}]
-  },
-  "verify": {"command": "uv run pytest -q", "baseline": true, "max_rounds": 3},
   "context": {"offload_chars": 8000, "micro_ratio": 0.6, "summary_ratio": 0.85},
   "mcpServers": {"fetch": {"command": "uvx", "args": ["mcp-server-fetch"]}}
 }
 ```
 
 - 模型档案：内置 `deepseek-flash`（默认，开启思考）、`qwen3-coder`、`glm-4.5-air`（后两个走硅基流动）。可以在 `models` 里添加或覆盖，每个档案有自己的 `context_budget`（默认 128k）和价格 `price_per_m`。`/model` 可以在会话中途切换。切到非 DeepSeek 的模型时，历史里的思考内容不会发送。
-- Hooks：Hook 进程从 stdin 收到 JSON（工具名、参数、结果），环境变量 `CODA_FILE` 是文件路径。PreToolUse 以退出码 2 退出表示否决；PostToolUse 的 stdout 会追加到工具结果后面。
-- 完成闸门：改过代码后（包括 bash 命令改动的文件，按执行前后的工作区指纹检测），模型准备结束时自动运行 `verify.command`，结果和修改前的基线比较，只把新增的失败回填给模型（pytest 通过 junitxml 精确到用例）。没有配置时，如果存在 `tests/` 目录，自动探测为 `uv run pytest -q`。`/verify off` 关闭闸门。
-- `tools`：只启用列出的内置工具，如 `["bash"]`（评测 E1 用）；不写表示全部启用。
+- `tools`：只启用列出的内置工具，如 `["bash"]`；不写表示全部启用。
 - MCP：只支持 stdio。启动后在后台连接 MCP Server，握手超时 15 秒，连不上只给提示，不影响其他功能。Server 的 stderr 写到 `~/.coda/logs/`。
 
 
 ## 开发
 
 ```bash
-uv run pytest -q        # 214 个测试：FakeLLM 回放主循环，Textual run_test 驱动界面，本地 MCP Server
+uv run pytest -q        # 197 个测试：FakeLLM 回放主循环，Textual run_test 驱动界面，本地 MCP Server
 uv run ruff check src tests && uv run ruff format src tests
 ```

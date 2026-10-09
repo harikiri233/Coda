@@ -1,6 +1,6 @@
 """配置：合并全局 ~/.coda/settings.json 与项目 .coda/settings.json。
 
-合并规则：标量和字典按键覆盖（项目优先）；permissions 下的规则列表、hooks 下的列表拼接。
+合并规则：标量和字典按键覆盖（项目优先）；permissions 下的规则列表拼接。
 API Key 只从环境变量或 ~/.coda/.env 读取，不读工作区里的 .env——那是被开发项目自己的密钥。
 """
 
@@ -43,14 +43,6 @@ class ModelProfile(BaseModel):
     price_per_m: Price | None = None
 
 
-class VerifyConfig(BaseModel):
-    command: str | None = None
-    baseline: bool = True
-    max_rounds: int = 3
-    timeout: int = 600
-    enabled: bool = True
-
-
 class ContextConfig(BaseModel):
     """上下文压缩。比例相对于模型档案的 context_budget。"""
 
@@ -69,21 +61,10 @@ class McpServerConfig(BaseModel):
     enabled: bool = True
 
 
-class HookSpec(BaseModel):
-    matcher: str = ".*"  # 工具名正则
-    command: str
-    timeout: float = 10.0
-
-
 class Permissions(BaseModel):
     allow: list[str] = Field(default_factory=list)
     ask: list[str] = Field(default_factory=list)
     deny: list[str] = Field(default_factory=list)
-
-
-class Hooks(BaseModel):
-    PreToolUse: list[HookSpec] = Field(default_factory=list)
-    PostToolUse: list[HookSpec] = Field(default_factory=list)
 
 
 DEFAULT_MODELS: dict[str, dict[str, Any]] = {
@@ -120,14 +101,12 @@ class Settings(BaseModel):
     mode: Mode = "default"
     max_steps: int = 60
     permissions: Permissions = Field(default_factory=Permissions)
-    hooks: Hooks = Field(default_factory=Hooks)
-    verify: VerifyConfig = Field(default_factory=VerifyConfig)
     context: ContextConfig = Field(default_factory=ContextConfig)
     mcpServers: dict[str, McpServerConfig] = Field(
         default_factory=dict
     )  # 与 Claude Code 等工具相同的键名
     show_thinking: bool = True
-    tools: list[str] | None = None  # 启用的工具名（如 ["bash"]，评测 E1 用）；None 表示全部
+    tools: list[str] | None = None  # 启用的工具名（如 ["bash"]）；None 表示全部
 
     def profile(self, name: str | None = None) -> ModelProfile:
         key = name or self.model
@@ -137,7 +116,7 @@ class Settings(BaseModel):
         return self.models[key]
 
 
-_LIST_SECTIONS = {"permissions", "hooks"}
+_LIST_SECTIONS = {"permissions"}
 
 
 def _merge(base: dict[str, Any], override: dict[str, Any], *, concat_lists: bool) -> dict[str, Any]:
@@ -174,15 +153,6 @@ def load_settings(workdir: Path) -> Settings:
     merged = _merge(merged, _read_json(coda_home() / "settings.json"), concat_lists=False)
     merged = _merge(merged, _read_json(project_settings_path(workdir)), concat_lists=False)
     return Settings.model_validate(merged)
-
-
-def update_project_settings(workdir: Path, patch: dict[str, Any]) -> Path:
-    """把 patch 合并写回项目配置（/init 写 verify.command 时用）。"""
-    path = project_settings_path(workdir)
-    data = _merge(_read_json(path), patch, concat_lists=False)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return path
 
 
 def _parse_env_file(path: Path) -> dict[str, str]:
